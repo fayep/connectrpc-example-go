@@ -10,7 +10,7 @@ protocols][connect-protocol].
 
 ## Installation
 
-You will need to install the following:
+You will need to install the following for this exercise:
 
 ```bash
 $ go install github.com/bufbuild/buf/cmd/buf@latest
@@ -18,6 +18,8 @@ $ go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest # we need this t
 $ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 $ go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
 ```
+
+If you prefer not to install these tools, we can try to use Replit or CodeSpaces for this interview.
 
 ## Check that installation work
 
@@ -67,6 +69,89 @@ You should see the following output:
 {"sentence":"bye"}
 
 ```
+
+## Interview Question
+
+Once everything is set up, your task is to implement a new bidirectional stream called `QueueConversation`.
+Similiar to `Converse`, `QueueConversation` takes in a payload `sentence`, but rather than return a reply right away, queues the sentence.
+
+The queue should have a limit. If the queue is full, the stream should message back that the queue is full, but keep the connection open.
+
+The response should look like the following:
+```
+grpcurl -plaintext -d '@'  localhost:8080 connectrpc.eliza.v1.ElizaService/QueueConversation
+{"sentence":"test is a test"}
+{
+  "sentence": "enqueued"
+}
+{"sentence":"you gotta"}
+{
+  "sentence": "enqueued"
+}
+{"sentence":"you gotta"}
+{
+  "sentence": "enqueued"
+}
+{"sentence":"you gotta"}
+{"sentence":"you gotta"}
+{"sentence":"you gotta"}
+{
+  "sentence": "queue is full!"
+}
+{
+  "sentence": "queue is full!"
+}
+{
+  "sentence": "queue is full!"
+}
+```
+
+Another goroutine should dequeue the job and respond back with a call to openai. We will provide you a token. Here is an example call via curl:
+
+```
+curl https://api.openai.com/v1/chat/completions   -H "Content-Type: application/json"   -H "Authorization: Bearer $OPENAI_API_KEY"   -d '{
+    "model": "gpt-4",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."
+      },
+      {
+        "role": "user",
+        "content": "Compose a poem that explains the concept of recursion in programming."
+      }
+    ]
+  }'
+```
+
+This is a sample response:
+```
+{
+  "id": "chatcmpl-8Y6YjZAAIR7RulcCNAJS8kyrzFkcz",
+  "object": "chat.completion",
+  "created": 1703139057,
+  "model": "gpt-4-0613",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "In the realm where logic flows, where codes create and nerds compose,\nThere lies a spell both sleek and clean, like a two-way mirror in machine,\nIn its essence pure and serenely mien, we behold the concept named Recursion.\n\nA function calling itself again, a loop unbroken, no end to attain,\nIt dives within its own domain, a reflection questing its own version.\nSelf-contained, a paradox in motion, an infinity mirror's reflection,\nThis dear is the charm, a jest in the name of Recursion.\n\nThe base case is the boundary end, the point at which the path will bend,\nFor the cycle to prevent the never-ending grind, Solutions, you see, it must always find.\nA condition met to stop the spin, a promise to the chaos, that order will win,\nIn these simple rules and not a single diversion, lies the elegant beauty called Recursion.\n\nFactorials, Fibonacci, and more, the traces of this method vast to explore,\nDizzying towers of Hanoi's game, trees of binary know its fame,\nA sequence by nature, or by the sorting game, recursion assists them just the same.\nIn this vast expanse of logical immersion, lives the dynamic power of Recursion.\n\nRecursion, the serpent eating its tail, going deeper without fail,\nTraveling down the rabbit hole, finding its base to reach the goal,\nReturns upon itself, a circle, not a line, a puzzle, a riddle, a sign,\nA tool of the code crafted in such precision, Oh marvel at the thought of Recursion.\n\nTo understand, to learn, to know this art, begin at the end, that’s where it starts,\nThe smallest fragment holds the key, to unlock the secrets for you and me,\nArmed with this knowledge, with this vision, we unmask the magic of Recursion.\n\nAn epitome of complexity and reduction, is indeed our friend, sweet Recursion,\nIn layers of code, it weaves its verse, an ode to order from the universe.\nSo toast to the code that spirals in precision, and raises a hat to lovely Recursion."
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 39,
+    "completion_tokens": 436,
+    "total_tokens": 475
+  },
+  "system_fingerprint": null
+}
+```
+
+You can find the documentation here: https://platform.openai.com
 
 ## Legal
 

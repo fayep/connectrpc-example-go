@@ -153,6 +153,11 @@ This is a sample response:
 
 You can find the documentation here: https://platform.openai.com
 
+After that, make a pool of gorountines that is configurable and dequeues.
+
+## Extra Time
+If there is extra time, it would be good to add retries and ratelimiting/circuit breaking between the queue and the call to OpenAI, as OpenAI can be very slow.
+
 ## Legal
 
 Offered under the [Apache 2 license][license].

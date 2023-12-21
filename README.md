@@ -1,40 +1,71 @@
-examples-go
+Go GRPC Interview
 ===========
 
-[![Build](https://github.com/connectrpc/examples-go/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/connectrpc/examples-go/actions/workflows/ci.yaml)
+This interview is meant to evaluate someone who is familiar with Golang and GRPC.
 
-`examples-go` contains an example RPC service built with [Connect][connect].
+This repo contains an example RPC service built with [Connect][connect].
 Its API is defined by a [Protocol Buffer schema][schema], and the service
 supports the [gRPC][grpc-protocol], [gRPC-Web][grpcweb-protocol], and [Connect
 protocols][connect-protocol].
 
-The service emulates the DOCTOR script written for Joseph Weizenbaum's 1966
-[ELIZA natural language processing system][eliza]. It responds to your
-statements as a stereotypical psychotherapist might; since the original program
-was a demonstration of the superficiality of human-computer communication, the
-therapy is not very convincing.
+## Installation
 
-For more on Connect, see the [announcement blog post][blog], the documentation
-on [connectrpc.com][docs], or the [Connect][connect] repo.
+You will need to install the following:
 
-## Example
+```bash
+$ go install github.com/bufbuild/buf/cmd/buf@latest
+$ go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest # we need this to verify the grpc call
+$ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+$ go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+```
 
-The service is running on https://demo.connectrpc.com. To make an RPC with cURL,
-using the Connect protocol:
+## Check that installation work
 
+Run the server like so:
+```
+go run cmd/demoserver/main.go
+```
+
+In another terminal, verify the server is working by:
 ```bash
 curl --header "Content-Type: application/json" \
     --data '{"sentence": "I feel happy."}' \
-    https://demo.connectrpc.com/connectrpc.eliza.v1.ElizaService/Say
+    localhost:8080/connectrpc.eliza.v1.ElizaService/Sayd
 ```
 
-To make the same RPC, but using [`grpcurl`][grpcurl] and the gRPC protocol:
+Verify grpc streaming is working using [`grpcurl`][grpcurl] and the gRPC protocol:
 
 ```bash
-grpcurl \
-    -d '{"sentence": "I feel happy."}' \
-    demo.connectrpc.com:443 \
-    connectrpc.eliza.v1.ElizaService/Say
+grpcurl -plaintext -d '@'  localhost:8080 connectrpc.eliza.v1.ElizaService/Converse
+```
+
+Send the following requests one at a time
+```
+{"sentence":"test"}
+{"sentence":"test"}
+{"sentence":"bye"}
+{"sentence":"bye"}
+```
+
+You should see the following output:
+```bash
+➜  connectrpc-example-go git:(main) ✗ grpcurl -plaintext -d '@'  localhost:8080 connectrpc.eliza.v1.ElizaService/Converse
+{"sentence":"test"}
+{
+  "sentence": "I see. And what does that tell you?"
+}
+{"sentence":"test"}
+{
+  "sentence": "Can you elaborate on that?"
+}
+{"sentence":"bye"}
+{
+  "sentence": "Goodbye. I'm looking forward to our next session."
+}
+
+
+{"sentence":"bye"}
+
 ```
 
 ## Legal

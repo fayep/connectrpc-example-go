@@ -217,6 +217,8 @@ func main() {
 		}
 	}()
 
+	fmt.Printf("Listening on %s\n", srv.Addr)
+
 	<-signals
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

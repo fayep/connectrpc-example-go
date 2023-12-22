@@ -34,7 +34,7 @@ In another terminal, verify the server is working by:
 ```bash
 curl --header "Content-Type: application/json" \
     --data '{"sentence": "I feel happy."}' \
-    localhost:8080/connectrpc.eliza.v1.ElizaService/Sayd
+    localhost:8080/connectrpc.eliza.v1.ElizaService/Say
 ```
 
 Verify grpc streaming is working using [`grpcurl`][grpcurl] and the gRPC protocol:

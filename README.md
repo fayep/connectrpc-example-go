@@ -10,6 +10,8 @@ protocols][connect-protocol].
 
 ## Installation
 
+**We recommend you set this up before the interview!**
+
 You will need to install the following for this exercise:
 
 ```bash
@@ -19,9 +21,9 @@ $ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 $ go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
 ```
 
-If you prefer not to install these tools, we can try to use Replit or CodeSpaces for this interview.
+If you prefer not to install these tools, we can use Replit or CodeSpaces for this interview.
 
-## Check that installation work
+### Check that installation worked
 
 Run the server like so:
 ```
@@ -69,13 +71,26 @@ You should see the following output:
 {"sentence":"bye"}
 
 ```
+**STOP HERE**! We will go over the rest during the interview.
 
 ## Interview Question
 
 Once everything is set up, your task is to implement a new bidirectional stream called `QueueConversation`.
-Similiar to `Converse`, `QueueConversation` takes in a payload `sentence`, but rather than return a reply right away, queues the sentence.
+Similar to `Converse`, `QueueConversation` takes in a payload `sentence`, but rather than return a reply right away, queues the sentence.
 
 The queue should have a limit. If the queue is full, the stream should message back that the queue is full, but keep the connection open.
+
+
+### Software Design and Stubbing out the GRPC calls
+In the first 30 minutes, we will design the grpc call and generate the stubs together.
+
+We will then discuss your approach to solving the problem at a high level. By the end of this session we should know the following:
+* The rough design of the queue and how you plan on handling the concurrency.
+* How do you plan on validating that it works? What checkpoints do you want to make along the way?
+* The surface area is quite big (which is on purpose!), so what parts you are interested in and where you intend to focus your time.
+
+### Implementation Portion
+After the initial conversation, we will leave you to implement the solution! I will be available via Zoom or Slack (totally your preference) for questions and to help you get unstuck.
 
 The response should look like the following:
 ```

@@ -31,6 +31,19 @@ service ElizaService {
   // back-and-forth messages with Eliza over a long-lived connection. Eliza
   // responds to each ConverseRequest with a ConverseResponse.
   rpc Converse(stream ConverseRequest) returns (stream ConverseResponse) {}
+
+  // Chat is a bidirectional RPC.  The caller may exchange multiple back and forth
+  // messages with OpenAI over a long-lived connection.  When a message is received
+  // the message is queued for sending to OpenAI.  Many messages may be queued
+  // (per connection limit of 6?) (for future we might enforce a limit on the server
+  // side, so you can know if we are under a heavy load and set your expectations)
+  // another future enhancement might be to give you an idea of how long you might
+  // be waiting for your result (don't expect this now).  You send a ChatRequest
+  // message and you will receive responses back from the server either a) to let you
+  // know that the server is fully queued or b) the response to the first message
+  // which has not yet been responded to.
+  rpc Chat(stream ChatRequest) returns (stream ChatResponse) {} 
+
   // Introduce is a server streaming RPC. Given the caller's name, Eliza
   // returns a stream of sentences to introduce itself.
   rpc Introduce(IntroduceRequest) returns (stream IntroduceResponse) {}
@@ -56,6 +69,36 @@ message ConverseRequest {
 // ConverseRequest.
 message ConverseResponse {
   string sentence = 1;
+}
+
+// ChatRequest is a single sentence request sent as part of a back and forth
+// conversation. (rpc Chat) Setting last_message to true will return any
+// remaining messages as they come and then disconnect you.
+message ChatRequest {
+  string sentence = 1;
+  bool last_message = 2;
+}
+
+// ChatEnqueued is a submessage for ChatResponse which tells you the status of
+// your request
+message ChatEnqueued {
+  string status = 1;
+  int64 id = 2;
+}
+
+// ChatSentence is a submessage for ChatResponse which tells you the response.
+message ChatSentence {
+  string sentence = 1;
+  int64 id = 2;
+}
+
+// ChatResponse is a single sentence response or a message telling you that
+// the message has been queued.  In future we might extend this to include an
+// id for the "enqueued" and "sentence" response so that you don't have to
+// remember the order you sent the message in.
+message ChatResponse {
+  ChatEnqueued enqueued = 1;
+  ChatSentence sentence = 2;
 }
 
 // IntroduceRequest asks Eliza to introduce itself to the named user.

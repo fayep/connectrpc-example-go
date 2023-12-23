@@ -83,6 +83,44 @@ func (e *elizaServer) Converse(
 	}
 }
 
+// Implementation of the elizaServer Chat method.
+func (e *elizaServer) Chat(
+	ctx context.Context,
+	stream *connect.BidiStream[elizav1.ChatRequest, elizav1.ChatResponse],
+) error {
+	// We're going to separate the request and response streams into separate
+	// goroutines. This is not required, but it's a good idea to do so to avoid
+	// blocking the server if the client is slow to send requests or receive
+	// responses.
+
+	// Setup some channels to communicate between the goroutines.
+	requests := make(chan *elizav1.ChatRequest)
+	responses := make(chan *elizav1.ChatResponse)
+	errs := make(chan error)
+
+	// Start a goroutine to receive requests from the client.
+	go func() {
+		defer close(requests)
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		request, err := stream.Receive()
+		if err != nil && errors.Is(err, io.EOF) {
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("receive request: %w", err)
+		}
+		reply, endSession := eliza.Reply(request.Sentence)
+		if err := stream.Send(&elizav1.ConverseResponse{Sentence: reply}); err != nil {
+			return fmt.Errorf("send response: %w", err)
+		}
+		if endSession {
+			return nil
+		}
+	}
+}
+
 func (e *elizaServer) Introduce(
 	ctx context.Context,
 	req *connect.Request[elizav1.IntroduceRequest],

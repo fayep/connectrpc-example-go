@@ -32,7 +32,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_7_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ElizaServiceName is the fully-qualified name of the ElizaService service.
@@ -51,8 +51,19 @@ const (
 	ElizaServiceSayProcedure = "/connectrpc.eliza.v1.ElizaService/Say"
 	// ElizaServiceConverseProcedure is the fully-qualified name of the ElizaService's Converse RPC.
 	ElizaServiceConverseProcedure = "/connectrpc.eliza.v1.ElizaService/Converse"
+	// ElizaServiceChatProcedure is the fully-qualified name of the ElizaService's Chat RPC.
+	ElizaServiceChatProcedure = "/connectrpc.eliza.v1.ElizaService/Chat"
 	// ElizaServiceIntroduceProcedure is the fully-qualified name of the ElizaService's Introduce RPC.
 	ElizaServiceIntroduceProcedure = "/connectrpc.eliza.v1.ElizaService/Introduce"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	elizaServiceServiceDescriptor         = v1.File_connectrpc_eliza_v1_eliza_proto.Services().ByName("ElizaService")
+	elizaServiceSayMethodDescriptor       = elizaServiceServiceDescriptor.Methods().ByName("Say")
+	elizaServiceConverseMethodDescriptor  = elizaServiceServiceDescriptor.Methods().ByName("Converse")
+	elizaServiceChatMethodDescriptor      = elizaServiceServiceDescriptor.Methods().ByName("Chat")
+	elizaServiceIntroduceMethodDescriptor = elizaServiceServiceDescriptor.Methods().ByName("Introduce")
 )
 
 // ElizaServiceClient is a client for the connectrpc.eliza.v1.ElizaService service.
@@ -63,6 +74,17 @@ type ElizaServiceClient interface {
 	// back-and-forth messages with Eliza over a long-lived connection. Eliza
 	// responds to each ConverseRequest with a ConverseResponse.
 	Converse(context.Context) *connect.BidiStreamForClient[v1.ConverseRequest, v1.ConverseResponse]
+	// Chat is a bidirectional RPC.  The caller may exchange multiple back and forth
+	// messages with OpenAI over a long-lived connection.  When a message is received
+	// the message is queued for sending to OpenAI.  Many messages may be queued
+	// (per connection limit of 6?) (for future we might enforce a limit on the server
+	// side, so you can know if we are under a heavy load and set your expectations)
+	// another future enhancement might be to give you an idea of how long you might
+	// be waiting for your result (don't expect this now).  You send a ChatRequest
+	// message and you will receive responses back from the server either a) to let you
+	// know that the server is fully queued or b) the response to the first message
+	// which has not yet been responded to.
+	Chat(context.Context) *connect.BidiStreamForClient[v1.ChatRequest, v1.ChatResponse]
 	// Introduce is a server streaming RPC. Given the caller's name, Eliza
 	// returns a stream of sentences to introduce itself.
 	Introduce(context.Context, *connect.Request[v1.IntroduceRequest]) (*connect.ServerStreamForClient[v1.IntroduceResponse], error)
@@ -81,18 +103,27 @@ func NewElizaServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		say: connect.NewClient[v1.SayRequest, v1.SayResponse](
 			httpClient,
 			baseURL+ElizaServiceSayProcedure,
+			connect.WithSchema(elizaServiceSayMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		converse: connect.NewClient[v1.ConverseRequest, v1.ConverseResponse](
 			httpClient,
 			baseURL+ElizaServiceConverseProcedure,
-			opts...,
+			connect.WithSchema(elizaServiceConverseMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		chat: connect.NewClient[v1.ChatRequest, v1.ChatResponse](
+			httpClient,
+			baseURL+ElizaServiceChatProcedure,
+			connect.WithSchema(elizaServiceChatMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		introduce: connect.NewClient[v1.IntroduceRequest, v1.IntroduceResponse](
 			httpClient,
 			baseURL+ElizaServiceIntroduceProcedure,
-			opts...,
+			connect.WithSchema(elizaServiceIntroduceMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -101,6 +132,7 @@ func NewElizaServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type elizaServiceClient struct {
 	say       *connect.Client[v1.SayRequest, v1.SayResponse]
 	converse  *connect.Client[v1.ConverseRequest, v1.ConverseResponse]
+	chat      *connect.Client[v1.ChatRequest, v1.ChatResponse]
 	introduce *connect.Client[v1.IntroduceRequest, v1.IntroduceResponse]
 }
 
@@ -112,6 +144,11 @@ func (c *elizaServiceClient) Say(ctx context.Context, req *connect.Request[v1.Sa
 // Converse calls connectrpc.eliza.v1.ElizaService.Converse.
 func (c *elizaServiceClient) Converse(ctx context.Context) *connect.BidiStreamForClient[v1.ConverseRequest, v1.ConverseResponse] {
 	return c.converse.CallBidiStream(ctx)
+}
+
+// Chat calls connectrpc.eliza.v1.ElizaService.Chat.
+func (c *elizaServiceClient) Chat(ctx context.Context) *connect.BidiStreamForClient[v1.ChatRequest, v1.ChatResponse] {
+	return c.chat.CallBidiStream(ctx)
 }
 
 // Introduce calls connectrpc.eliza.v1.ElizaService.Introduce.
@@ -127,6 +164,17 @@ type ElizaServiceHandler interface {
 	// back-and-forth messages with Eliza over a long-lived connection. Eliza
 	// responds to each ConverseRequest with a ConverseResponse.
 	Converse(context.Context, *connect.BidiStream[v1.ConverseRequest, v1.ConverseResponse]) error
+	// Chat is a bidirectional RPC.  The caller may exchange multiple back and forth
+	// messages with OpenAI over a long-lived connection.  When a message is received
+	// the message is queued for sending to OpenAI.  Many messages may be queued
+	// (per connection limit of 6?) (for future we might enforce a limit on the server
+	// side, so you can know if we are under a heavy load and set your expectations)
+	// another future enhancement might be to give you an idea of how long you might
+	// be waiting for your result (don't expect this now).  You send a ChatRequest
+	// message and you will receive responses back from the server either a) to let you
+	// know that the server is fully queued or b) the response to the first message
+	// which has not yet been responded to.
+	Chat(context.Context, *connect.BidiStream[v1.ChatRequest, v1.ChatResponse]) error
 	// Introduce is a server streaming RPC. Given the caller's name, Eliza
 	// returns a stream of sentences to introduce itself.
 	Introduce(context.Context, *connect.Request[v1.IntroduceRequest], *connect.ServerStream[v1.IntroduceResponse]) error
@@ -141,18 +189,27 @@ func NewElizaServiceHandler(svc ElizaServiceHandler, opts ...connect.HandlerOpti
 	elizaServiceSayHandler := connect.NewUnaryHandler(
 		ElizaServiceSayProcedure,
 		svc.Say,
+		connect.WithSchema(elizaServiceSayMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	elizaServiceConverseHandler := connect.NewBidiStreamHandler(
 		ElizaServiceConverseProcedure,
 		svc.Converse,
-		opts...,
+		connect.WithSchema(elizaServiceConverseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	elizaServiceChatHandler := connect.NewBidiStreamHandler(
+		ElizaServiceChatProcedure,
+		svc.Chat,
+		connect.WithSchema(elizaServiceChatMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	elizaServiceIntroduceHandler := connect.NewServerStreamHandler(
 		ElizaServiceIntroduceProcedure,
 		svc.Introduce,
-		opts...,
+		connect.WithSchema(elizaServiceIntroduceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/connectrpc.eliza.v1.ElizaService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -160,6 +217,8 @@ func NewElizaServiceHandler(svc ElizaServiceHandler, opts ...connect.HandlerOpti
 			elizaServiceSayHandler.ServeHTTP(w, r)
 		case ElizaServiceConverseProcedure:
 			elizaServiceConverseHandler.ServeHTTP(w, r)
+		case ElizaServiceChatProcedure:
+			elizaServiceChatHandler.ServeHTTP(w, r)
 		case ElizaServiceIntroduceProcedure:
 			elizaServiceIntroduceHandler.ServeHTTP(w, r)
 		default:
@@ -177,6 +236,10 @@ func (UnimplementedElizaServiceHandler) Say(context.Context, *connect.Request[v1
 
 func (UnimplementedElizaServiceHandler) Converse(context.Context, *connect.BidiStream[v1.ConverseRequest, v1.ConverseResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("connectrpc.eliza.v1.ElizaService.Converse is not implemented"))
+}
+
+func (UnimplementedElizaServiceHandler) Chat(context.Context, *connect.BidiStream[v1.ChatRequest, v1.ChatResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("connectrpc.eliza.v1.ElizaService.Chat is not implemented"))
 }
 
 func (UnimplementedElizaServiceHandler) Introduce(context.Context, *connect.Request[v1.IntroduceRequest], *connect.ServerStream[v1.IntroduceResponse]) error {
